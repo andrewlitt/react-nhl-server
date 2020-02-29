@@ -48,13 +48,24 @@ app.get('/game/:id', (req,res) => {
       .then(r => r.json())
       .then(game => {
         console.log(game)
+
+        const homePlayers = { players: Object.values(game.liveData.boxscore.teams.home.players)};
+        const awayPlayers = { players: Object.values(game.liveData.boxscore.teams.away.players)};
         const info = {
           id: game.gamePk,
-          home: game.gameData.teams.home,
-          away: game.gameData.teams.away,
+          home: {
+            ...game.gameData.teams.home,
+            ...game.liveData.boxscore.teams.home.teamStats,
+            ...homePlayers
+          },
+          away:{
+            ...game.gameData.teams.away,
+            ...game.liveData.boxscore.teams.away.teamStats,
+            ...awayPlayers
+          },
           linescore: game.liveData.linescore,
           players: Object.values(game.gameData.players),
-          plays: game.liveData.plays,
+          plays: game.liveData.plays, 
         };
         return info;
       })
