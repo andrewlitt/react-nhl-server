@@ -1,6 +1,7 @@
 const express = require('express');
 const fetch = require('node-fetch');
 const cors = require('cors');
+const Constants = require('./constants');
 //const bcrypt = require('bcrypt-nodejs');
 //const knex = require('knex')
 /*
@@ -17,10 +18,17 @@ const db = knex({
   
 const app = express();
 
+function getColors(id){
+  let data = Constants.TEAM_INFO.find( team => team.id == id);
+  return {
+    color1: data.color1,
+    color2: data.color2
+  }
+}
+
 app.use(cors());
 app.use(express.urlencoded({extended: false}));
 app.use(express.json());
-
 app.get('/', (req,res) => {
     fetch('https://statsapi.web.nhl.com/api/v1/schedule')
       .then(r => r.json())
@@ -49,17 +57,23 @@ app.get('/game/:id', (req,res) => {
       .then(game => {
         console.log(game)
 
-        const homePlayers = { players: Object.values(game.liveData.boxscore.teams.home.players)};
+        const awayStyle = getColors(game.gameData.teams.away.id)
+        const homeStyle = getColors(game.gameData.teams.home.id)
+
         const awayPlayers = { players: Object.values(game.liveData.boxscore.teams.away.players)};
+        const homePlayers = { players: Object.values(game.liveData.boxscore.teams.home.players)};
+
         const info = {
           id: game.gamePk,
           home: {
             ...game.gameData.teams.home,
+            ...homeStyle,
             ...game.liveData.boxscore.teams.home.teamStats,
             ...homePlayers
           },
           away:{
             ...game.gameData.teams.away,
+            ...awayStyle,
             ...game.liveData.boxscore.teams.away.teamStats,
             ...awayPlayers
           },
