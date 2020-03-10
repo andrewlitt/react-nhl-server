@@ -2,21 +2,6 @@ const express = require('express');
 const fetch = require('node-fetch');
 const cors = require('cors');
 const Constants = require('./constants');
-//const bcrypt = require('bcrypt-nodejs');
-//const knex = require('knex')
-/*
-const db = knex({
-    client: 'pg',
-    connection: {
-      host : '127.0.0.1',
-      user : 'aneagoie',
-      password : '',
-      database : 'smart-brain'
-    }
-  });
-*/
-  
-const app = express();
 
 function getColors(id){
   let data = Constants.TEAM_INFO.find( team => team.id == id);
@@ -26,25 +11,47 @@ function getColors(id){
   }
 }
 
+function filterPlayers(arr){
+  const data = Object.values(arr);
+  const Players = { players: data.filter(player => player.stats.skaterStats).map(player => {
+        const info = {
+            jerseyNumber: player.jerseyNumber,
+            fullName: player.person.fullName,
+            goals: player.stats.skaterStats.goals,
+            shots: player.stats.skaterStats.shots,
+            hits: player.stats.skaterStats.hits,
+            timeOnIce: player.stats.skaterStats.timeOnIce
+        };
+        return info;
+    }) 
+  };
+  return Players;
+}
+
+const app = express();
+
 app.use(cors());
 app.use(express.urlencoded({extended: false}));
 app.use(express.json());
 app.get('/', (req,res) => {
     fetch('https://statsapi.web.nhl.com/api/v1/schedule')
       .then(r => r.json())
-      .then(result => result.dates[0].games)
-      .then(games => games.map(game =>
-        {
-            console.log(game);
-            const info = {
-              gamePk: game.gamePk,
-              status: game.status,
-              home: game.teams.home,
-              away: game.teams.away,
-            };
-            return info;
+      .then(result => result.dates[0])
+      .then(data => {
+        const games = data.games.map(game => {
+              const info = {
+                gamePk: game.gamePk,
+                status: game.status,
+                home: game.teams.home,
+                away: game.teams.away,
+              };
+              return info;
         })
-      )
+        return {
+          date: data.date,
+          games: games
+        };
+      })
       .then(data => res.json(data));
 })
 
@@ -60,9 +67,9 @@ app.get('/game/:id', (req,res) => {
         const awayStyle = getColors(game.gameData.teams.away.id)
         const homeStyle = getColors(game.gameData.teams.home.id)
 
-        const awayPlayers = { players: Object.values(game.liveData.boxscore.teams.away.players)};
-        const homePlayers = { players: Object.values(game.liveData.boxscore.teams.home.players)};
-
+        const awayPlayers = filterPlayers(game.liveData.boxscore.teams.away.players);
+        const homePlayers = filterPlayers(game.liveData.boxscore.teams.home.players);
+        
         const info = {
           id: game.gamePk,
           home: {
@@ -86,7 +93,6 @@ app.get('/game/:id', (req,res) => {
       .then(data => res.json(data))
       .catch(console.log('Shit'));
 })
-
 
 app.listen(8000, () => {
     console.log('Server Started');
