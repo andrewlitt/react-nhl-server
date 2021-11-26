@@ -33,22 +33,25 @@ const app = express();
 app.use(cors());
 app.use(express.urlencoded({extended: false}));
 app.use(express.json());
+
 app.get('/', (req,res) => {
     fetch('https://statsapi.web.nhl.com/api/v1/schedule')
       .then(r => r.json())
-      .then(result => result.dates[0])
+      .then(result => (result.totalGames > 0) ? result.dates[0] : null)
       .then(data => {
-        const games = data.games.map(game => {
-              const info = {
-                gamePk: game.gamePk,
-                status: game.status,
-                home: game.teams.home,
-                away: game.teams.away,
-              };
-              return info;
-        })
+        var games = [];
+        if (data != null){
+          games = data.games.map(game => {
+            const info = {
+              gamePk: game.gamePk,
+              status: game.status,
+              home: game.teams.home,
+              away: game.teams.away,
+            };
+            return info;
+          })
+        }
         return {
-          date: data.date,
           games: games
         };
       })
@@ -69,7 +72,7 @@ app.get('/game/:id', (req,res) => {
 
         const awayPlayers = filterPlayers(game.liveData.boxscore.teams.away.players);
         const homePlayers = filterPlayers(game.liveData.boxscore.teams.home.players);
-        
+
         const info = {
           id: game.gamePk,
           home: {
